@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --secondary: #f8f9fa;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --success: #00b894;
+            --error: #d63031;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f6fa;
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .description {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+        }
+
+        .mic-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .mic-button:hover {
+            background-color: var(--primary-light);
+            transform: scale(1.05);
+        }
+
+        .mic-button.recording {
+            background-color: var(--error);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .submit-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .submit-button:hover {
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .output-box {
+            background-color: var(--secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .output-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .output-content {
+            color: var(--text);
+            min-height: 2rem;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .score-bar {
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background-color: var(--primary);
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .play-button {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .play-button:hover {
+            background-color: #00a884;
+            transform: translateY(-2px);
+        }
+
+        .play-button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(108, 92, 231, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* History Section Styles */
+        .history-section {
+            margin-top: 2rem;
+            border-top: 1px solid #eee;
+            padding-top: 1.5rem;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .clear-history {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .clear-history:hover {
+            color: var(--error);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .history-item {
+            background-color: var(--secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .history-item-date {
+            font-weight: 500;
+        }
+
+        .history-item-score {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .history-item-score-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .history-item-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .history-item-text {
+            font-size: 0.95rem;
+        }
+
+        .history-item-corrected {
+            font-size: 0.95rem;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: var(--text-light);
+            padding: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .mic-button {
+                align-self: center;
+            }
+        }
+
+        /* File Upload Styles */
+        .file-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .file-upload-label {
+            background-color: var(--primary-light);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-upload-label:hover {
+            background-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-name {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Grammar Assistant</h1>
+        <p class="description">Upload an audio file or enter text to get grammar correction and scoring.</p>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" class="text-input" id="textInput" placeholder="Type your text here...">
+                <button class="mic-button" id="micButton">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="file-upload-container">
+                <label for="audioFile" class="file-upload-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Upload Audio File
+                </label>
+                <input type="file" id="audioFile" accept="audio/*" class="file-input">
+                <span id="fileName" class="file-name"></span>
+            </div>
+            
+            <button class="submit-button" id="submitButton">Process</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing your input...</p>
+        </div>
+
+        <div class="output-section">
+            <div class="output-box">
+                <div class="output-label">Transcription</div>
+                <div class="output-content" id="transcription">-</div>
+            </div>
+            
+            <div class="output-box">
+                <div class="output-label">Original Text</div>
+                <div class="output-content" id="originalText">-</div>
+            </div>
+            
+            <div class="output-box">
+                <div class="output-label">Grammar-Corrected Text</div>
+                <div class="output-content" id="correctedText">-</div>
+            </div>
+            
+            <div class="output-box">
+                <div class="output-label">Grammar Score</div>
+                <div class="score-display">
+                    <div class="score-value" id="scoreValue">-</div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="scoreFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="play-button" id="playButton" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Play Corrected Text
+            </button>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="history-header">
+                <div class="history-title">History</div>
+                <button class="clear-history" id="clearHistory">Clear History</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">No history yet. Your corrections will appear here.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const micButton = document.getElementById('micButton');
+        const submitButton = document.getElementById('submitButton');
+        const textInput = document.getElementById('textInput');
+        const loading = document.getElementById('loading');
+        const transcription = document.getElementById('transcription');
+        const originalText = document.getElementById('originalText');
+        const correctedText = document.getElementById('correctedText');
+        const scoreValue = document.getElementById('scoreValue');
+        const scoreFill = document.getElementById('scoreFill');
+        const playButton = document.getElementById('playButton');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryButton = document.getElementById('clearHistory');
+
+        // Audio recording variables
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let currentAudioUrl = null;
+
+        // History array to store previous corrections
+        let history = JSON.parse(localStorage.getItem('grammarHistory')) || [];
+
+        // Initialize history display
+        function initHistory() {
+            if (history.length > 0) {
+                historyList.innerHTML = '';
+                history.forEach((item, index) => {
+                    addHistoryItem(item, index);
+                });
+            }
+        }
+
+        // Add item to history
+        function addToHistory(data) {
+            const historyItem = {
+                id: Date.now(),
+                date: new Date().toLocaleString(),
+                transcription: data.transcription || "",
+                originalText: data.originalText,
+                correctedText: data.correctedText,
+                grammarScore: data.grammarScore,
+                audioPath: data.audioPath
+            };
+            
+            history.unshift(historyItem); // Add to beginning of array
+            if (history.length > 10) history.pop(); // Keep only last 10 items
+            
+            localStorage.setItem('grammarHistory', JSON.stringify(history));
+            
+            // Update history display
+            historyList.innerHTML = '';
+            history.forEach((item, index) => {
+                addHistoryItem(item, index);
+            });
+        }
+
+        // Add history item to DOM
+        function addHistoryItem(item, index) {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.innerHTML = `
+                <div class="history-item-header">
+                    <div class="history-item-date">${item.date}</div>
+                    <div class="history-item-score">
+                        Score: <span class="history-item-score-value">${item.grammarScore.toFixed(1)}</span>
+                    </div>
+                </div>
+                <div class="history-item-content">
+                    <div class="history-item-text">${item.originalText}</div>
+                    <div class="history-item-corrected">${item.correctedText}</div>
+                </div>
+            `;
+            
+            // Add click event to load this item into the main display
+            historyItem.addEventListener('click', () => {
+                loadHistoryItem(item);
+            });
+            
+            historyList.appendChild(historyItem);
+        }
+
+        // Load history item into main display
+        function loadHistoryItem(item) {
+            transcription.textContent = item.transcription || "-";
+            originalText.textContent = item.originalText;
+            correctedText.textContent = item.correctedText;
+            
+            const score = item.grammarScore;
+            scoreValue.textContent = score.toFixed(1);
+            scoreFill.style.width = `${(score / 5) * 100}%`;
+            
+            // Set up audio playback
+            if (item.audioPath) {
+                currentAudioUrl = item.audioPath;
+                playButton.disabled = false;
+            } else {
+                playButton.disabled = true;
+            }
+            
+            // Scroll to top of page
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Clear history
+        clearHistoryButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all history?')) {
+                history = [];
+                localStorage.removeItem('grammarHistory');
+                historyList.innerHTML = '<div class="history-empty">No history yet. Your corrections will appear here.</div>';
+            }
+        });
+
+        // Toggle recording
+        micButton.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        // Start recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Process the audio
+                    processAudio(audioBlob);
+                };
+                
+                audioChunks = [];
+                mediaRecorder.start();
+                isRecording = true;
+                micButton.classList.add('recording');
+                micButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                    </svg>
+                `;
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert('Could not access microphone. Please check permissions.');
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                micButton.classList.remove('recording');
+                micButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                `;
+            }
+        }
+
+        // Process text input
+        submitButton.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text) {
+                processText(text);
+            } else {
+                alert('Please enter some text or record audio.');
+            }
+        });
+
+        // Process text
+        function processText(text) {
+            showLoading();
+            
+            // Send text to backend
+            fetch('/api/process-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateUI(data);
+                addToHistory(data);
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your text.');
+                hideLoading();
+            });
+        }
+
+        // Process audio
+        function processAudio(audioBlob) {
+            showLoading();
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            
+            // Send audio to backend
+            fetch('/api/process-audio', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateUI(data);
+                addToHistory(data);
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your audio.');
+                hideLoading();
+            });
+        }
+
+        // Update UI with results
+        function updateUI(data) {
+            transcription.textContent = data.transcription || "-";
+            originalText.textContent = data.originalText;
+            correctedText.textContent = data.correctedText;
+            
+            const score = data.grammarScore;
+            scoreValue.textContent = score.toFixed(1);
+            scoreFill.style.width = `${(score / 5) * 100}%`;
+            
+            // Set up audio playback
+            if (data.audioPath) {
+                currentAudioUrl = data.audioPath;
+                playButton.disabled = false;
+            } else {
+                playButton.disabled = true;
+            }
+        }
+
+        // Play corrected text
+        playButton.addEventListener('click', () => {
+            if (currentAudioUrl) {
+                const audio = new Audio(currentAudioUrl);
+                audio.play();
+            }
+        });
+
+        // Show loading spinner
+        function showLoading() {
+            loading.classList.add('active');
+        }
+
+        // Hide loading spinner
+        function hideLoading() {
+            loading.classList.remove('active');
+        }
+
+        // File upload handling
+        const audioFileInput = document.getElementById('audioFile');
+        const fileNameDisplay = document.getElementById('fileName');
+
+        audioFileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const fileName = this.files[0].name;
+                fileNameDisplay.textContent = fileName;
+                
+                // Automatically process the file when selected
+                processAudioFile(this.files[0]);
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
+
+        // Process uploaded audio file
+        function processAudioFile(file) {
+            showLoading();
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('audio', file);
+            
+            // Send audio to backend
+            fetch('/api/process-audio', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateUI(data);
+                addToHistory(data);
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your audio file.');
+                hideLoading();
+            });
+        }
+
+        // Initialize history on page load
+        initHistory();
+    </script>
+</body>
+</html> 

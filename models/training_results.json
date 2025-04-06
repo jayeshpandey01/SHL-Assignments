@@ -1,0 +1,8 @@
+{
+    "mse": 0.0,
+    "mae": 0.0,
+    "val_predictions": [
+        3.0
+    ],
+    "n_samples": 1
+}
