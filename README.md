@@ -70,15 +70,21 @@ Output:
    ```
    python batch_grammar_assistant.py
    ```
-4. Results will be saved to `dataset/grammar_results.csv`
+4. Results will be saved to `dataset/grammar_results.csv` and `dataset/submission.csv`
 
 ## Output Format
 
-The output CSV file contains the following columns:
-- `filename`: Original audio filename
-- `transcript`: Transcribed text from the audio
-- `grammar_score`: Grammar score (0-5)
-- `corrected_text`: Grammar-corrected version of the transcript
+The script generates two output files:
+
+1. `dataset/grammar_results.csv` - Detailed results with the following columns:
+   - `filename`: Original audio filename
+   - `transcript`: Transcribed text from the audio
+   - `grammar_score`: Grammar score (0-5)
+   - `corrected_text`: Grammar-corrected version of the transcript
+
+2. `dataset/submission.csv` - Submission format matching sample_submission.csv with:
+   - `filename`: Original audio filename
+   - `label`: Grammar score (0-5)
 
 ## Memory Management
 

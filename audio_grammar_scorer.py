@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import gc
 import logging
-from transformers import pipeline, BitsAndBytesConfig
+import argparse
 from tqdm import tqdm
 
 # Set up logging
@@ -40,20 +40,12 @@ logger.info(f"Using device: {device}")
 
 # Load models with error handling
 try:
-    # Load Whisper model for transcription with memory optimization
-    bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+    # Load Whisper model for transcription
     whisper_model = whisper.load_model("base", device=device)
     
     # Load grammar scoring model
     with open("outputs/grammar_scorer.pkl", "rb") as f:
         grammar_model = pickle.load(f)
-    
-    # Load grammar correction model with memory optimization
-    corrector = pipeline(
-        "text2text-generation",
-        model="vennify/t5-base-grammar-correction",
-        model_kwargs={"quantization_config": bnb_config}
-    )
 except Exception as e:
     logger.error(f"Error loading models: {str(e)}")
     raise
@@ -123,54 +115,11 @@ def extract_text_features(text):
             "text_length": 0
         }
 
-def correct_grammar(text):
-    """Correct grammar using the Hugging Face model"""
-    try:
-        # Split long text into smaller chunks if needed
-        max_chunk_length = 500
-        chunks = []
-        
-        # Simple chunking by sentences
-        sentences = text.split('. ')
-        current_chunk = ""
-        
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) < max_chunk_length:
-                current_chunk += sentence + ". "
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                current_chunk = sentence + ". "
-        
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-        
-        # If text is short enough, process it as a single chunk
-        if len(chunks) == 1:
-            clear_gpu_memory()  # Clear memory before correction
-            result = corrector(text, max_length=512, do_sample=False)[0]['generated_text']
-            return result
-        else:
-            # Process each chunk separately and combine results
-            corrected_chunks = []
-            for chunk in chunks:
-                clear_gpu_memory()  # Clear memory before each correction
-                corrected_chunk = corrector(chunk, max_length=512, do_sample=False)[0]['generated_text']
-                corrected_chunks.append(corrected_chunk)
-            
-            # Combine chunks
-            final_result = " ".join(corrected_chunks)
-            return final_result
-    except Exception as e:
-        logger.error(f"Error correcting grammar: {str(e)}")
-        # Return original text if correction fails
-        return text
-
-def process_audio_file(audio_filename, audio_dir="dataset/audios_test"):
+def process_audio_file(audio_path):
     """Process a single audio file and return results"""
     try:
-        # Construct full path to audio file
-        audio_path = os.path.join(audio_dir, audio_filename)
+        # Get filename from path
+        audio_filename = os.path.basename(audio_path)
         
         # Transcribe audio
         transcript = transcribe_audio(audio_path)
@@ -184,38 +133,33 @@ def process_audio_file(audio_filename, audio_dir="dataset/audios_test"):
         df = pd.DataFrame([features])
         grammar_score = grammar_model.predict(df)[0]
         
-        # Correct grammar
-        corrected_text = correct_grammar(transcript)
-        
         return {
             "filename": audio_filename,
             "transcript": transcript,
-            "grammar_score": grammar_score,
-            "corrected_text": corrected_text
+            "label": grammar_score
         }
     except Exception as e:
-        logger.error(f"Error processing {audio_filename}: {str(e)}")
+        logger.error(f"Error processing {audio_path}: {str(e)}")
         return {
-            "filename": audio_filename,
+            "filename": os.path.basename(audio_path),
             "transcript": f"Error: {str(e)}",
-            "grammar_score": 0,
-            "corrected_text": f"Error: {str(e)}"
+            "label": 0
         }
 
-def main():
-    """Main function to process all audio files in test.csv"""
+def process_directory(input_dir, output_file):
+    """Process all audio files in a directory"""
     try:
-        # Read test.csv file
-        test_df = pd.read_csv("dataset/test.csv")
-        logger.info(f"Found {len(test_df)} audio files to process")
+        # Get all audio files in the directory
+        audio_files = [f for f in os.listdir(input_dir) if f.endswith(('.wav', '.mp3', '.m4a', '.ogg'))]
+        logger.info(f"Found {len(audio_files)} audio files to process")
         
         # Create results list
         results = []
         
         # Process each audio file
-        for _, row in tqdm(test_df.iterrows(), total=len(test_df), desc="Processing audio files"):
-            audio_filename = row["filename"]
-            result = process_audio_file(audio_filename)
+        for audio_file in tqdm(audio_files, desc="Processing audio files"):
+            audio_path = os.path.join(input_dir, audio_file)
+            result = process_audio_file(audio_path)
             results.append(result)
             
             # Clear memory after each file
@@ -224,37 +168,47 @@ def main():
         # Create results DataFrame
         results_df = pd.DataFrame(results)
         
-        # Create submission DataFrame in the format of sample_submission.csv
-        submission_df = pd.DataFrame({
-            "filename": results_df["filename"],
-            "label": results_df["grammar_score"]
-        })
+        # Save results to CSV
+        results_df.to_csv(output_file, index=False)
+        logger.info(f"Results saved to {output_file}")
         
-        # Save detailed results to CSV
-        detailed_output_path = "dataset/grammar_results.csv"
-        results_df.to_csv(detailed_output_path, index=False)
-        logger.info(f"Detailed results saved to {detailed_output_path}")
+        return output_file
+    
+    except Exception as e:
+        logger.error(f"Error processing directory: {str(e)}")
+        raise
+
+def main():
+    """Main function to process audio files"""
+    parser = argparse.ArgumentParser(description="Process audio files and output grammar scores")
+    parser.add_argument("--input", "-i", required=True, help="Input audio file or directory")
+    parser.add_argument("--output", "-o", default="grammar_scores.csv", help="Output CSV file")
+    parser.add_argument("--directory", "-d", action="store_true", help="Process all audio files in the input directory")
+    
+    args = parser.parse_args()
+    
+    try:
+        if args.directory:
+            # Process all audio files in the directory
+            output_file = process_directory(args.input, args.output)
+        else:
+            # Process a single audio file
+            result = process_audio_file(args.input)
+            
+            # Create results DataFrame
+            results_df = pd.DataFrame([result])
+            
+            # Save results to CSV
+            results_df.to_csv(args.output, index=False)
+            logger.info(f"Results saved to {args.output}")
+            
+            output_file = args.output
         
-        # Save submission format results to CSV
-        submission_output_path = "dataset/submission.csv"
-        submission_df.to_csv(submission_output_path, index=False)
-        logger.info(f"Submission format results saved to {submission_output_path}")
-        
-        return submission_output_path
+        print(f"Processing complete. Results saved to: {output_file}")
     
     except Exception as e:
         logger.error(f"Error in main function: {str(e)}")
-        # Create a minimal results file with error information
-        error_df = pd.DataFrame([{
-            "filename": "ERROR",
-            "transcript": f"Error: {str(e)}",
-            "grammar_score": 0,
-            "corrected_text": "Processing failed due to an error"
-        }])
-        error_df.to_csv("dataset/grammar_results_error.csv", index=False)
-        logger.info("Error information saved to dataset/grammar_results_error.csv")
         raise
 
 if __name__ == "__main__":
-    output_file = main()
-    print(f"Processing complete. Results saved to: {output_file}") 
+    main() 
