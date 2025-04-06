@@ -19,7 +19,7 @@ A comprehensive grammar correction and scoring application that processes both t
 ## Example Outputs
 
 ### Flask Web Interface
-![Flask Interface Output](screenshots/flask_output.png)
+![Flask Interface Output](images/image_02.png)
 The Flask web interface provides a modern, user-friendly experience with:
 - Clean audio recording interface
 - Clear display of transcription, original text, and corrections
@@ -27,7 +27,7 @@ The Flask web interface provides a modern, user-friendly experience with:
 - Audio playback controls for corrected text
 
 ### Gradio Interface
-![Gradio Interface Output](screenshots/gradio_output.png)
+![Gradio Interface Output](images/image_01.png)
 The Gradio interface offers an alternative interface with:
 - Simple audio recording and upload options
 - Side-by-side display of original and corrected text
